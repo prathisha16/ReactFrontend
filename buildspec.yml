@@ -3,21 +3,25 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo Logging in to DockerHub...
-      - docker login -u $DOCKERHUB_USER -p $DOCKERHUB_PASS
-      - REPOSITORY_URI="docker.io/anujsharma1990/frontend"
-      - CONTAINER_NAME="frontend-container"
-      - IMAGE_TAG="latest"
+      - echo Logging in to Amazon ECR
+      - ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+      - REPOSITORY_URI=$ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/devbank-frontend
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
+      - echo Building frontend Docker image
       - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+      - docker tag $REPOSITORY_URI:$IMAGE_TAG $REPOSITORY_URI:latest
+
   post_build:
     commands:
-      - echo Build completed on `date`
+      - echo Pushing frontend image to ECR
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - echo Writing image definitions file...
-      - printf '[{"name":"'$CONTAINER_NAME'","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > builddefinition.json
+      - docker push $REPOSITORY_URI:latest
+      - printf '[{"name":"frontend-container","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
+
 artifacts:
-    files: builddefinition.json
+  files:
+    - imagedefinitions.json

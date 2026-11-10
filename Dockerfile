@@ -1,15 +1,19 @@
-FROM node:18
+FROM node:20-alpine AS build
 
-ENV HOME=/home/app
+WORKDIR /app
 
-COPY package.json $HOME/node_docker/
+COPY package*.json ./
 
-WORKDIR $HOME/node_docker
+RUN npm install
 
-RUN npm install --silent --progress=false
+COPY . .
 
-COPY . $HOME/node_docker
+RUN npm run build
 
-EXPOSE 3000
+FROM nginx:alpine
 
-CMD ["npm", "start"]
+COPY --from=build /app/build /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
