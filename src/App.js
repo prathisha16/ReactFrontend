@@ -9,10 +9,10 @@ class App extends Component {
     }
 
     callAPI() {
-        fetch(process.env.APIURL)
+        fetch(process.env.REACT_APP_API_URL)
             .then(res => res.text())
             .then(res => this.setState({ apiResponse: res }))
-            .catch(err => err);
+            .catch(err => console.error("API call failed:", err));
     }
 
     componentDidMount() {
